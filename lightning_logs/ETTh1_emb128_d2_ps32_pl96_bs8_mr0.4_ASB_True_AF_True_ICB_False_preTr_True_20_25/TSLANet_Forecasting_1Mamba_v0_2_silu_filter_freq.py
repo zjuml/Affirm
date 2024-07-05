@@ -10,8 +10,6 @@ import torch.optim as optim
 from einops import rearrange
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint, TQDMProgressBar
 from torchmetrics.regression import MeanSquaredError, MeanAbsoluteError
-from timm.models.layers import DropPath
-from timm.models.layers import trunc_normal_
 
 from data_factory import data_provider
 from utils import save_copy_of_files, random_masking_3D, str2bool

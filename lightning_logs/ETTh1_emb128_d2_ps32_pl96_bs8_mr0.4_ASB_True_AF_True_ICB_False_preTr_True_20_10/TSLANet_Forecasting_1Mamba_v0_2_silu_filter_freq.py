@@ -10,12 +10,10 @@ import torch.optim as optim
 from einops import rearrange
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint, TQDMProgressBar
 from torchmetrics.regression import MeanSquaredError, MeanAbsoluteError
-from timm.models.layers import DropPath
-from timm.models.layers import trunc_normal_
 
 from data_factory import data_provider
 from utils import save_copy_of_files, random_masking_3D, str2bool
-from affnet.layers import ConvLayer, get_normalization_layer, get_activation_fn
+from Adaptive_Frequency_Filters.affnet.layers import ConvLayer, get_normalization_layer, get_activation_fn
 from mamba_ssm import Mamba
 from low_denoise import LowFrequencyDenoiser
 import torch.nn.functional as F
