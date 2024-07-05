@@ -1,7 +1,7 @@
 # Ours
-lightning_logs
-datasets
-Forecasting/lightning_logs
+lightning_logs/
+datasets/
+Forecasting/lightning_logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
