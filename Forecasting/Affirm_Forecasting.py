@@ -58,8 +58,9 @@ class Adaptive_Spectral_Block(nn.Module):
         self.block_size = self.hidden_size // self.num_blocks
         self.hidden_size_factor = hidden_size_factor
         self.scale = 0.02
-        # self.act = nn.ReLU()
-
+        self.act = nn.ReLU()
+        self.patch_size = args.patch_size
+        self.stride = self.patch_size // 2
         
         self.w1 = nn.Parameter(
             self.scale * torch.randn(2, self.num_blocks, self.block_size, self.block_size * self.hidden_size_factor))
@@ -114,13 +115,15 @@ class Adaptive_Spectral_Block(nn.Module):
         print(f"x_in:{x_in}")
         print(f"x_in.shape:{x_in.shape}")
         B, N, C = x_in.shape
-        B1, C1, H, W = x_in.shape
+        x_patched = x_in.unfold(dimension=-1, size=self.patch_size, step=self.stride)
+        print(f"x_patched.shape:{x_patched.shape}")
+        # B1, C1, H, W = x_in.shape
         dtype = x_in.dtype
         x = x_in.to(torch.float32)
          
         # Apply FFT along the time dimension
         x_fft = torch.fft.rfft(x, dim=1, norm='ortho')
-        x_fft_1 = torch.fft.rfft2(x, dim=(2, 3), norm="ortho")
+        x_fft_1 = torch.fft.rfft2(x, dim=1, norm="ortho")
         weight = torch.view_as_complex(self.complex_weight)
         x_weighted = x_fft * weight
         origin_ffted = x_fft_1 
@@ -129,33 +132,40 @@ class Adaptive_Spectral_Block(nn.Module):
         # # x_norm = x_norm.transpose(1, 2)
         # x_relu = self.act(x_norm)
         # x_norm_twice = self.norm1(x_relu)
-        o1_real = self.act(
-            torch.einsum('bkihw,kio->bkohw', origin_ffted.real, self.w1[0]) - \
-            torch.einsum('bkihw,kio->bkohw', origin_ffted.imag, self.w1[1]) + \
-            self.b1[0, :, :, None, None]
-        )
+        # o1_real = self.act(
+        #     torch.einsum('bkihw,kio->bkohw', origin_ffted.real, self.w1[0]) - \
+        #     torch.einsum('bkihw,kio->bkohw', origin_ffted.imag, self.w1[1]) + \
+        #     self.b1[0, :, :, None, None]
+        # )
+        print(f"x_patched.shape:{x_patched.shape}")
+        print(f"self.w1.shape:{self.w1.shape}")
+        print(f"self.w1[0].shape:{self.w1[0].shape}")
+        print(f"self.w2.shape:{self.w2.shape}")
+        x_patched_w1 = x_patched * self.w1[0]
+        x_patched_w2 = self.act(x_patched_w1)
+        x_patched_w3 = x_patched_w2 * self.w2[0]
 
-        o1_imag = self.act2(
-            torch.einsum('bkihw,kio->bkohw', origin_ffted.imag, self.w1[0]) + \
-            torch.einsum('bkihw,kio->bkohw', origin_ffted.real, self.w1[1]) + \
-            self.b1[1, :, :, None, None]
-        )
+        # o1_imag = self.act2(
+        #     torch.einsum('bkihw,kio->bkohw', origin_ffted.imag, self.w1[0]) + \
+        #     torch.einsum('bkihw,kio->bkohw', origin_ffted.real, self.w1[1]) + \
+        #     self.b1[1, :, :, None, None]
+        # )
 
-        o2_real = (
-                torch.einsum('bkihw,kio->bkohw', o1_real, self.w2[0]) - \
-                torch.einsum('bkihw,kio->bkohw', o1_imag, self.w2[1]) + \
-                self.b2[0, :, :, None, None]
-        )
+        # o2_real = (
+        #         torch.einsum('bkihw,kio->bkohw', o1_real, self.w2[0]) - \
+        #         torch.einsum('bkihw,kio->bkohw', o1_imag, self.w2[1]) + \
+        #         self.b2[0, :, :, None, None]
+        # )
 
-        o2_imag = (
-                torch.einsum('bkihw,kio->bkohw', o1_imag, self.w2[0]) + \
-                torch.einsum('bkihw,kio->bkohw', o1_real, self.w2[1]) + \
-                self.b2[1, :, :, None, None]
-        )
-        x_fft_linear = torch.stack([o2_real, o2_imag], dim=-1)
-        x_fft_linear = F.softshrink(x_fft_linear, lambd=self.sparsity_threshold)
-        x_fft_linear = torch.view_as_complex(x_fft_linear)
-        x_fft_linear = x_fft_linear.reshape(B1, C1, x.shape[3], x.shape[4])
+        # o2_imag = (
+        #         torch.einsum('bkihw,kio->bkohw', o1_imag, self.w2[0]) + \
+        #         torch.einsum('bkihw,kio->bkohw', o1_real, self.w2[1]) + \
+        #         self.b2[1, :, :, None, None]
+        # )
+        # x_fft_linear = torch.stack([o2_real, o2_imag], dim=-1)
+        # x_fft_linear = F.softshrink(x_fft_linear, lambd=self.sparsity_threshold)
+        # x_fft_linear = torch.view_as_complex(x_fft_linear)
+        # x_fft_linear = x_fft_linear.reshape(B1, C1, x.shape[3], x.shape[4])
 
         x_fft_linear = x_fft_linear * origin_ffted
         x_fft_linear = torch.fft.irfft2(x, s=(H, W), dim=(2, 3), norm="ortho")
@@ -408,9 +418,13 @@ class TSLANet(nn.Module):
         self.out_layer = nn.Linear(args.emb_dim * num_patches, args.pred_len)
 
     def pretrain(self, x_in):
+        print(f"x_in.shape:{x_in.shape}")
         x = rearrange(x_in, 'b l m -> b m l')
+        print(f"x.shape:{x.shape}")
         x_patched = x.unfold(dimension=-1, size=self.patch_size, step=self.stride)
+        print(f"x_patched.shape:{x_patched.shape}")
         x_patched = rearrange(x_patched, 'b m n p -> (b m) n p')
+        print(f"x_patched.shape:{x_patched.shape}")
 
         xb_mask, _, self.mask, _ = random_masking_3D(x_patched, mask_ratio=args.mask_ratio)
         self.mask = self.mask.bool()  # mask: [bs x num_patch]
@@ -627,7 +641,7 @@ if __name__ == '__main__':
 
     # Data args...
     parser.add_argument('--data', type=str, default='custom', help='dataset type')
-    parser.add_argument('--root_path', type=str, default='datasets/ETT-small/',
+    parser.add_argument('--root_path', type=str, default='/home/huhuajin/Affirm/datasets/ETT-small',
                         help='root path of the data file')
     parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='data file')
     parser.add_argument('--embed', type=str, default='timeF',
@@ -716,6 +730,8 @@ if __name__ == '__main__':
 
     # load datasets ...
     train_data, train_loader = data_provider(args, flag='train')
+    # print(f"train_data.shape:{train_data.shape}")
+    # print(f"train_data_loader.shape:{train_loader.shape}")
     vali_data, val_loader = data_provider(args, flag='val')
     test_data, test_loader = data_provider(args, flag='test')
     print("Dataset loaded ...")
