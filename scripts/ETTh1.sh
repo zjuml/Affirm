@@ -1,6 +1,6 @@
 for len in 96 192 336 720
 do
-  python -u Forecasting/TSLANet_Forecasting_1Mamba_v0_2_silu_filter_freq.py \
+  python -u Affirm_Forecasting.py \
   --root_path datasets/ETT-small \
   --pred_len $len \
   --data ETTh1 \

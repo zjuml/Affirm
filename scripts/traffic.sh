@@ -1,6 +1,6 @@
 for len in 96 192 336 720
 do
-  python -u TSLANet_Forecasting_1Mamba_v0_2_silu_filter_freq.py \
+  python -u Affirm_Forecasting.py \
   --root_path /mnt/sdb/hhj/TSLANet/all_datasets/traffic/ \
   --pred_len $len \
   --data custom \
