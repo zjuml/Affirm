@@ -1,7 +1,7 @@
 for len in 96 192 336 720
 do
-  python -u Affirm_Forecasting.py \
-  --root_path /mnt/sdb/hhj/TSLANet/all_datasets/exchange_rate \
+  python -u Forecasting/Affirm_Forecasting.py \
+  --root_path datasets/exchange_rate \
   --pred_len $len \
   --data custom \
   --data_path exchange_rate.csv \
