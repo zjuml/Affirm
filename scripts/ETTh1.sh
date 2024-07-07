@@ -1,6 +1,6 @@
 for len in 96 192 336 720
 do
-  python -u Affirm_Forecasting.py \
+  python -u Forecasting/Affirm_Forecasting.py \
   --root_path datasets/ETT-small \
   --pred_len $len \
   --data ETTh1 \
