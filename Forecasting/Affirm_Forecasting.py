@@ -54,7 +54,7 @@ class IDMamba_Block(L.LightningModule):
         self.act = nn.SiLU()
         self.drop = nn.Dropout(drop)
         self.conv = nn.Conv1d(dim, dim, 1)
-        self.mamba = Mamba(dim, d_state=self.configs.d_state, d_conv_1=self.configs.dconv1, d_conv_2=self.configs.dconv2, expand=self.configs.e_fact)
+        self.mamba = Mamba(dim, d_state=self.configs.d_state, d_conv_1=self.configs.d_conv_1, d_conv_2=self.configs.d_conv_2, expand=self.configs.e_fact)
         
     def forward(self, x):
         x_act = self.act(x)
@@ -479,8 +479,8 @@ if __name__ == '__main__':
     parser.add_argument('--ch_ind', type=int, default=0, help='Channel Independence; True 1 False 0')
     parser.add_argument('--residual', type=int, default=1, help='Residual Connection; True 1 False 0')
     parser.add_argument('--d_state', type=int, default=16, help='d_state parameter of Mamba')
-    parser.add_argument('--dconv1', type=int, default=2, help='d_conv parameter of Mamba')
-    parser.add_argument('--dconv2', type=int, default=4, help='d_conv parameter of Mamba')
+    parser.add_argument('--d_conv_1', type=int, default=2, help='d_conv parameter of Mamba')
+    parser.add_argument('--d_conv_2', type=int, default=4, help='d_conv parameter of Mamba')
     parser.add_argument('--e_fact', type=int, default=1, help='expand factor parameter of Mamba')
     parser.add_argument('--enc_in', type=int, default=7, help='encoder input size') #Use this hyperparameter as the number of channels
     # parser.add_argument('--dropout', type=float, default=0.0, help='dropout')
