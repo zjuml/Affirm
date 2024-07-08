@@ -2,6 +2,7 @@
 lightning_logs/
 datasets/
 Forecasting/lightning_logs/
+textOutput/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
