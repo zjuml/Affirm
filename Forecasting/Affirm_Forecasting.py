@@ -104,8 +104,8 @@ class Adaptive_Fourier_Filter_Block(nn.Module):
         self.learnable_filter_layer_3 = LearnableFilterLayer(dim)
         
         self.threshold_param = nn.Parameter(torch.rand(1) * 0.5)
-        self.low_pass_cut_freq_param = nn.Parameter(dim // 2 - torch.rand(1) * 0.5)
-        self.high_pass_cut_freq_param = nn.Parameter(dim // 4 - torch.rand(1) * 0.5)
+        self.low_pass_cut_freq_param = nn.Parameter(dim // 2 - torch.rand(1) * 0.5)#用于确定低通滤波的截至频率，维度大小的一半减去一个小的随机值
+        self.high_pass_cut_freq_param = nn.Parameter(dim // 4 - torch.rand(1) * 0.5)#高通滤波的截至频率，维度大小的四分之一减去一个小的随机值
     
     def create_adaptive_high_freq_mask(self, x_fft):
         B, _, _ = x_fft.shape
@@ -130,18 +130,18 @@ class Adaptive_Fourier_Filter_Block(nn.Module):
 
         return adaptive_mask
         
-    def adaptive_freq_pass(self, x_fft, flag="high"):
+    def adaptive_freq_pass(self, x_fft, flag="high"): #对频率进行mask，flag指定是应用高通还是低通
         B, H, W_half = x_fft.shape  # W_half is the reduced dimension for real FFT
         W = (W_half - 1) * 2  # Calculate the full width assuming the input was real
         
         # Generate the non-negative frequency values along one dimension
         freq = torch.fft.rfftfreq(W, d=1/W).to(x_fft.device)
         
-        if flag == "high":
-            freq_mask = torch.abs(freq) >= self.high_pass_cut_freq_param.to(x_fft.device)
+        if flag == "high": #根据flag创建mask
+            freq_mask = torch.abs(freq) >= self.high_pass_cut_freq_param.to(x_fft.device)#允许高于 high_pass_cut_freq_param 的频率
         else:
-            freq_mask = torch.abs(freq) <= self.low_pass_cut_freq_param.to(x_fft.device)
-        return x_fft * freq_mask
+            freq_mask = torch.abs(freq) <= self.low_pass_cut_freq_param.to(x_fft.device)#允许低于 low_pass_cut_freq_param 的频率
+        return x_fft * freq_mask#将此mask应用于x_fft, 以选择性地保留某些频率
         
     def forward(self, x_in):
         B, N, C = x_in.shape
@@ -153,11 +153,12 @@ class Adaptive_Fourier_Filter_Block(nn.Module):
 
         if args.adaptive_filter:
             # freq_mask = self.create_adaptive_high_freq_mask(x_fft)
-            x_low_pass = self.adaptive_freq_pass(x_fft, flag="low")
+            x_low_pass = self.adaptive_freq_pass(x_fft, flag="low")#低通
             
-            x_high_pass = self.adaptive_freq_pass(x_fft, flag="high")
+            x_high_pass = self.adaptive_freq_pass(x_fft, flag="high")#高通
 
         x_weighted = self.learnable_filter_layer_1(x_fft) + self.learnable_filter_layer_2(x_low_pass) + self.learnable_filter_layer_3(x_high_pass)
+        #x_weighted = self.learnable_filter_layer_1(x_fft) + self.learnable_filter_layer_2(x_low_pass)#只要低通，相当于只去掉高频噪声
         # Apply Inverse FFT
         x = torch.fft.irfft(x_weighted, n=N, dim=1, norm='ortho')
 

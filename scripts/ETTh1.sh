@@ -1,7 +1,7 @@
 seeds=(51 2024)
 d_states=(16 32)
 pred_lens=(96 192 336 720)
-seq_len=336
+seq_len=512
 for seed in "${seeds[@]}"
 do
     for d_state in "${d_states[@]}"
